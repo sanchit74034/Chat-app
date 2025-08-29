@@ -136,30 +136,35 @@ export const changepassword = async (req,res) =>{
     }
 }
 
-export const updateProfilePic = async (req,res) =>{
-    try {
-    const userId = req.user.userId;
+export const updateProfilePic = async (req, res) => {
+  try {
+    const userId = req.user._id;  // from protectedRoute
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file uploaded" });
+    }
 
     // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload_stream(
-      {
-        folder: "profile_pics",
-      },
-      async (error, result) => {
-        if (error) return res.status(500).json({ message: "Upload failed" });
-
-        const user = await User.findByIdAndUpdate(
-          userId,
-          { profilepic: result.secure_url },
-          { new: true }
+    const uploadToCloudinary = (buffer) =>
+      new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "profile_pics" },
+          (error, result) => (error ? reject(error) : resolve(result))
         );
+        stream.end(buffer);
+      });
 
-        res.status(200).json({ profilepic: user.profilepic });
-      }
+    const result = await uploadToCloudinary(req.file.buffer);
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { profilepic: result.secure_url },
+      { new: true }
     );
 
-    result.end(req.file.buffer);
+    res.status(200).json({ profilepic: user.profilepic });
   } catch (error) {
+    console.error("Profile pic update error:", error);
     res.status(500).json({ message: "Error updating profile picture" });
   }
 };

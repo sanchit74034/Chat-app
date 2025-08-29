@@ -3,20 +3,21 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
 import messageRoutes from './routes/message.routes.js';
-import { server, app } from './lib/socket.js';  // <--- reuse app and server from socket.js
+import { server, app } from './lib/socket.js'; 
 import { connectDB } from './lib/db.js';
 import { bodyparser } from './middleware/bodyparser.js';
 
 dotenv.config();
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
 // middlewares
 app.use(bodyparser);
 app.use(cookieParser());
 app.use(cors({
   origin: ["http://localhost:5173", "http://localhost:5174"],
-  credentials: true 
+  credentials: true ,
+   methods: ["GET", "POST", "PUT", "DELETE"],
 }));
 
 // routes

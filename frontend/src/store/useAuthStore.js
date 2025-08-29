@@ -69,20 +69,30 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  updateProfile: async (data) => {
-    set({ isUpdatingProfile: true });
-    try {
-      // Ensure data.fullname is used if updating name
-      const res = await axiosInstance.put("/auth/update-profile-pic", data);
-      set({ authUser: res.data });
-      toast.success("Profile updated successfully");
-    } catch (error) {
-      console.log("Error in update profile:", error);
-      toast.error(error?.response?.data?.message || "Profile update failed");
-    } finally {
-      set({ isUpdatingProfile: false });
-    }
-  },
+  updateProfile: async (file) => {
+  set({ isUpdatingProfile: true });
+  try {
+    if (!file) throw new Error("No file selected");
+
+    const formData = new FormData();
+    formData.append("image", file); // must match backend upload.single("image")
+
+    const res = await axiosInstance.put("/auth/update-profile-pic", formData, {
+      withCredentials: true,
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    set({ authUser: res.data });
+    toast.success("Profile updated successfully");
+  } catch (error) {
+    console.log("Error in update profile:", error);
+    toast.error(error?.response?.data?.message || "Profile update failed");
+  } finally {
+    set({ isUpdatingProfile: false });
+  }
+},
+
+
 
   connectSocket: () => {
     const { authUser, socket } = get();
