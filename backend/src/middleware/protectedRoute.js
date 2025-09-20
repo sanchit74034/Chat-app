@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 
 export const protectedRoute = (req, res, next) => {
   try {
@@ -7,8 +7,8 @@ export const protectedRoute = (req, res, next) => {
       return res.status(401).json({ message: "Unauthorized: No token provided" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_KEY);
-    req.user = { _id: decoded.userId };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // ✅ same key
+    req.user = { userId: decoded.userId }; // ✅ match payload
 
     next();
   } catch (error) {
