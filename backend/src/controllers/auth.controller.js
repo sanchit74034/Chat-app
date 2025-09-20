@@ -3,13 +3,11 @@ import bcrypt from 'bcryptjs'
 import generatetoken from '../lib/utils.js'
 import cloudinary from '../lib/cloudinary.js'
 
-
-
+// SIGNUP
 export const signup = async (req, res) => {
   try {
     const { fullname, email, password } = req.body;
 
-    
     if (!fullname || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -18,30 +16,24 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
-    
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    
     const newUser = new User({
       fullname,
       email,
       password: hashedPassword
     });
 
-    
     await newUser.save();
 
-    
     generatetoken(newUser._id, res);  
 
-    
     res.status(201).json({
       _id: newUser._id,
       fullname: newUser.fullname,
@@ -55,90 +47,90 @@ export const signup = async (req, res) => {
   }
 };
 
+// LOGIN
+export const login = async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" }); // added return
+    }
 
-export const login = async (req,res)=>{
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(400).json({ message: "Invalid credentials" }); // added return
+    }
 
-    const {email,password} = req.body;
-        try {
-            const user = await User.findOne({email})
-            if(!user){
-                res.status(400).json({message: "Invalid ceredentials"})
-            }
+    generatetoken(user._id, res);
 
-            const isPasswordCorrect = await bcrypt.compare(password,user.password);
-            if(!isPasswordCorrect){
-                res.status(400).json({message:"Invalid ceredentials"})
-            }
-
-            generatetoken(user._id, res);
-
-            res.status(200).json({
-            _id: user._id,
-            fullname: user.fullname,
-            email: user.email,
-            profilepic: user.profilepic,
+    res.status(200).json({
+      _id: user._id,
+      fullname: user.fullname,
+      email: user.email,
+      profilepic: user.profilepic,
     });
 
-         } 
-         catch (error) {
-            console.log("error in login page",error.message);
-            res.status(500).json({message:"Internal error"})
-        }
-}
+  } catch (error) {
+    console.log("error in login page", error.message);
+    res.status(500).json({ message: "Internal error" });
+  }
+};
 
+// LOGOUT
+export const logout = (req, res) => {
+  try {
+    res.cookie("jwt", "", {
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: 'Strict',
+      secure: process.env.NODE_ENV !== 'development'
+    });
+    res.status(200).json({ message: "logout succesfully" });
+  } catch (error) {
+    console.log("error in logout controller", error.message);
+    res.status(500).json({ message: "Internal server erro" });
+  }
+};
 
-export const logout = (req,res)=>{
-    try {
-      res.cookie("jwt","",{
-        maxAge:0,
-        httpOnly: true,
-        sameSite: 'Strict',
-        secure: process.env.NODE_ENV !== 'development'
-    })
-      res.status(200).json({message:"logout succesfully"})  
-    } catch (error) {
-        console.log("error in logout controller",error.message);
-        res.status(500).json({message:"Internal server erro"})
+// CHANGE PASSWORD
+export const changepassword = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { email, oldPassword, newPassword } = req.body;
+
+    if (!email || !oldPassword || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" }); // added return
     }
-}
 
-export const changepassword = async (req,res) =>{
-    try {
-
-        const userId = req.user.userId;
-        const{email,oldPassword,newPassword} = req.body;
-
-        if(!email || !oldPassword || !newPassword){
-            res.status(400).json({message:"All fields are required"});
-        }
-
-        const user = await User.findById(userId);
-        if(!user){
-            res.send(400).json({message:"User Not Found"})
-        }
-
-       const IsPasswordMatch = await bcrypt.compare(oldPassword,user.password)
-       if(!IsPasswordMatch){
-        res.status(400).json({message:"Password is incorrect"})
-       }
-
-       if(newPassword.length<6){
-        res.status(400).json({message:"Password contain atLeast 6 characters"})
-       }
-       const salt = await bcrypt.genSalt(10);
-       user.password = await bcrypt.hash(newPassword,salt)
-       await user.save();
-
-       res.status(201).json({message:"Password change Successfully"})
-
-    } catch (error) {
-        res.status(500).json({message:"Internal server error"})
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(400).json({ message: "User Not Found" }); // added return and fix
     }
-}
 
+    const IsPasswordMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!IsPasswordMatch) {
+      return res.status(400).json({ message: "Password is incorrect" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password contain atLeast 6 characters" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(201).json({ message: "Password change Successfully" });
+
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// UPDATE PROFILE PICTURE
 export const updateProfilePic = async (req, res) => {
   try {
-    const userId = req.user._id;  // from protectedRoute
+    const userId = req.user.userId;  // fixed from req.user._id
 
     if (!req.file) {
       return res.status(400).json({ message: "No image file uploaded" });
@@ -169,6 +161,7 @@ export const updateProfilePic = async (req, res) => {
   }
 };
 
+// CHECK AUTH
 export const checkauth = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("-password");
@@ -180,5 +173,3 @@ export const checkauth = async (req, res) => {
     res.status(400).json({ message: "Unauthorized access" });
   }
 };
-
- 
