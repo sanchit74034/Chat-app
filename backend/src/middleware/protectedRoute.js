@@ -7,8 +7,10 @@ export const protectedRoute = (req, res, next) => {
       return res.status(401).json({ message: "Unauthorized: No token provided" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // ✅ same key
-    req.user = { userId: decoded.userId }; // ✅ match payload
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    
+    req.user = { _id: decoded.userId };
 
     next();
   } catch (error) {
