@@ -53,12 +53,12 @@ export const login = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" }); // added return
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
-      return res.status(400).json({ message: "Invalid credentials" }); // added return
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
     generatetoken(user._id, res);
@@ -95,16 +95,17 @@ export const logout = (req, res) => {
 // CHANGE PASSWORD
 export const changepassword = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user._id;   // updated
+
     const { email, oldPassword, newPassword } = req.body;
 
     if (!email || !oldPassword || !newPassword) {
-      return res.status(400).json({ message: "All fields are required" }); // added return
+      return res.status(400).json({ message: "All fields are required" });
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(400).json({ message: "User Not Found" }); // added return and fix
+      return res.status(400).json({ message: "User Not Found" });
     }
 
     const IsPasswordMatch = await bcrypt.compare(oldPassword, user.password);
@@ -130,7 +131,7 @@ export const changepassword = async (req, res) => {
 // UPDATE PROFILE PICTURE
 export const updateProfilePic = async (req, res) => {
   try {
-    const userId = req.user.userId;  // fixed from req.user._id
+    const userId = req.user._id;  // updated
 
     if (!req.file) {
       return res.status(400).json({ message: "No image file uploaded" });
@@ -164,7 +165,7 @@ export const updateProfilePic = async (req, res) => {
 // CHECK AUTH
 export const checkauth = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("-password");
+    const user = await User.findById(req.user._id).select("-password"); // updated
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
